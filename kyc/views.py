@@ -110,8 +110,21 @@ class SessionResultView(APIView):
                 face_id = face_matches[0]['Face']['FaceId']
                 total_faces = len(face_matches)
                 logger.info(f"Duplicate face found using past Face ID: {face_id} in collection {aws_rekognition.collection_id}, Total faces in collection: {total_faces}")
-                
-                # Use the existing face_id for KYC creation
+
+                # Check if the face_id already exists in the KYC records for this user
+                existing_kyc = KYC.objects.filter(user=user, face_id=face_id).first()
+
+                if existing_kyc:
+                    logger.info(f"Duplicate face detected for user {user.id} using Face ID {face_id}.")
+                    # Return a response indicating that the KYC record already exists
+                    return Response({
+                        'message': 'Duplicate face detected, KYC already exists',
+                        'confidence': confidence,
+                        'face_id': face_id,
+                        'total_faces_in_collection': total_faces
+                    }, status=status.HTTP_200_OK)
+
+                # If no existing KYC found, create a new KYC record
                 kyc = KYC.objects.create(
                     user=request.user,
                     face_id=face_id,
@@ -150,3 +163,4 @@ class SessionResultView(APIView):
         except Exception as e:
             logger.error(f"Error processing session result for user {user.id}: {str(e)}")
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
