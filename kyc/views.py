@@ -108,7 +108,7 @@ class SessionResultView(APIView):
             face_id = aws_rekognition.index_face(reference_image_bytes)
             print(f"Indexed face ID: {face_id}")
             # Step 6: Create KYC record using the existing S3 image URL
-            kyc = KYC.objects.create(
+            kyc = KYC(
                 user=request.user,
                 face_id=face_id,
                 s3_image_url=s3_url,
