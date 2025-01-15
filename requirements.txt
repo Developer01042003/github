@@ -8,6 +8,7 @@ django-cors-headers
 boto3
 django-storages
 
+django-environ
 
 
 # Environment Variables
