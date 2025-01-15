@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from ...kyc_back.company.views import CompanyViewSet
+from .views import CompanyViewSet
 
 router = DefaultRouter()
 router.register(r'', CompanyViewSet)
