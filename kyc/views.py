@@ -111,18 +111,12 @@ class SessionResultView(APIView):
             face_id = aws_rekognition.index_face(reference_image_bytes)
             print(f"Indexed face ID: {face_id}")
             # Step 6: Create KYC record using the existing S3 image URL
-            kyc = KYC(
+            kyc = KYC.objects.create(
                 user=request.user,
                 face_id=face_id,
                 selfie_url=s3_url,
                 is_verified=True
             )
-            try:
-               kyc.save()
-            except Exception as e:
-              logger.error(f"Error saving KYC object: {e}")
-             
-            
             return Response({
                 'message': 'KYC completed successfully',
                 'confidence': confidence
