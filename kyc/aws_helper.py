@@ -50,7 +50,7 @@ class AWSRekognition:
         except Exception as e:
             raise Exception(f"Error creating face liveness session: {str(e)}")
 
-    def clear_collections(self):
+    def clear_collection(self):
         """Clear all collections and their faces in Rekognition."""
         try:
             # List all collections in Rekognition
