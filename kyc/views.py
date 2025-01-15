@@ -102,11 +102,13 @@ class SessionResultView(APIView):
             # Step 4: Download image as bytes from S3
             reference_image_bytes = aws_rekognition.download_image_as_bytes(bucket_name, object_key)
 
-            # Step 5: Check for duplicate faces
-            duplicate_result = aws_rekognition.search_faces(reference_image_bytes)
-            if duplicate_result['duplicate']:
-                face_id = duplicate_result['face_id']
-                total_faces = duplicate_result['total_faces']
+            # Step 5: Check for duplicate faces using your `search_faces` helper function
+            face_matches = aws_rekognition.search_faces(reference_image_bytes)
+
+            if face_matches:
+                # Duplicate face found
+                face_id = face_matches[0]['Face']['FaceId']
+                total_faces = len(face_matches)
                 logger.info(f"Duplicate face found using past Face ID: {face_id} in collection {aws_rekognition.collection_id}, Total faces in collection: {total_faces}")
                 
                 # Use the existing face_id for KYC creation
@@ -123,25 +125,28 @@ class SessionResultView(APIView):
                     'total_faces_in_collection': total_faces
                 }, status=status.HTTP_200_OK)
 
-            # Step 6: If no duplicate, index the face
+            # Step 6: If no duplicate, index the face using your `index_face` helper function
             face_id = aws_rekognition.index_face(reference_image_bytes)
 
             # Step 7: Create KYC record with new face
-            kyc = KYC.objects.create(
-                user=request.user,
-                face_id=face_id,
-                selfie_url=s3_url,
-                is_verified=True
-            )
-            logger.info(f"KYC record created for user {request.user.id} with new Face ID {face_id}")
+            if face_id:
+                kyc = KYC.objects.create(
+                    user=request.user,
+                    face_id=face_id,
+                    selfie_url=s3_url,
+                    is_verified=True
+                )
+                logger.info(f"KYC record created for user {request.user.id} with new Face ID {face_id}")
 
-            return Response({
-                'message': 'KYC completed successfully',
-                'confidence': confidence,
-                'face_id': face_id
-            }, status=status.HTTP_200_OK)
+                return Response({
+                    'message': 'KYC completed successfully',
+                    'confidence': confidence,
+                    'face_id': face_id
+                }, status=status.HTTP_200_OK)
+            else:
+                logger.error("No face was indexed.")
+                return Response({'error': 'Face could not be indexed.'}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
             logger.error(f"Error processing session result for user {user.id}: {str(e)}")
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
