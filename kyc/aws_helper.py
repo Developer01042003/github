@@ -36,7 +36,7 @@ class AWSRekognition:
                 raise Exception(f"Error checking collection: {str(e)}")
 
     def create_face_liveness_session(self):
-        """Create a face liveness session."""
+        """Create a face liveness session (no automatic face indexing)."""
         try:
             response = self.client.create_face_liveness_session(
                 Settings={
@@ -51,34 +51,25 @@ class AWSRekognition:
             raise Exception(f"Error creating face liveness session: {str(e)}")
 
     def clear_collection(self):
-        """Clear all collections and their faces in Rekognition."""
+        """Clear all faces in the Rekognition collection."""
         try:
-            # List all collections in Rekognition
-            response = self.client.list_collections(MaxResults=1000)  # Adjust the max results as needed
-            collections = response.get('CollectionIds', [])
+            # List all faces in the collection
+            response = self.client.list_faces(CollectionId=self.collection_id)
+            face_ids = [face['FaceId'] for face in response.get('Faces', [])]
             
-            if collections:
-                for collection_id in collections:
-                    print(f"Clearing collection: {collection_id}")
-
-                    # List all faces in the collection
-                    response = self.client.list_faces(CollectionId=collection_id)
-                    face_ids = [face['FaceId'] for face in response.get('Faces', [])]
-                    
-                    # Delete all faces in the collection
-                    if face_ids:
-                        self.client.delete_faces(CollectionId=collection_id, FaceIds=face_ids)
-                        print(f"Deleted {len(face_ids)} faces from collection {collection_id}.")
-                    else:
-                        print(f"No faces found in collection {collection_id}.")
-
-                    # Delete the collection itself
-                    self.client.delete_collection(CollectionId=collection_id)
-                    print(f"Deleted collection {collection_id}.")
+            # Delete all faces in the collection
+            if face_ids:
+                self.client.delete_faces(CollectionId=self.collection_id, FaceIds=face_ids)
+                logger.info(f"Deleted {len(face_ids)} faces from collection {self.collection_id}.")
             else:
-                print("No collections found to clear.")
+                logger.info(f"No faces found in collection {self.collection_id}.")
+                
+            # Optional: Clear the collection itself (if needed)
+            # self.client.delete_collection(CollectionId=self.collection_id)
+            # logger.info(f"Deleted collection {self.collection_id}.")
+            
         except Exception as e:
-            raise Exception(f"Error clearing all collections: {str(e)}")
+            raise Exception(f"Error clearing collection: {str(e)}")
 
     def get_session_results(self, session_id):
         """Retrieve session results from AWS Rekognition."""
@@ -91,9 +82,12 @@ class AWSRekognition:
     def search_faces(self, image_bytes):
         """Search for duplicate faces in the Rekognition collection."""
         try:
+            # Log the number of faces in the collection
             response = self.client.list_faces(CollectionId=self.collection_id)
             total_faces = len(response.get('Faces', []))
             logger.info(f"Total faces in collection {self.collection_id}: {total_faces}")
+
+            # Search for duplicate faces
             response = self.client.search_faces_by_image(
                 CollectionId=self.collection_id,
                 Image={'Bytes': image_bytes},
