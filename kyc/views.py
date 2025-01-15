@@ -64,6 +64,7 @@ class SessionResultView(APIView):
         if not session_id:
             return Response({'error': 'Session ID is required'}, status=status.HTTP_400_BAD_REQUEST)
         
+        print(f"Processing session result for user: {user.id}, session_id: {session_id}")
         try:
             aws_rekognition = AWSRekognition()
 

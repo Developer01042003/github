@@ -1,5 +1,5 @@
 from django.contrib import admin
-from ...kyc_back.company.models import Company,KycSharedData
+from .models import Company,KycSharedData
 import uuid
 
 @admin.register(Company)
