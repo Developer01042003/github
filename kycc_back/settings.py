@@ -83,7 +83,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'kyc_back.wsgi.application'
+WSGI_APPLICATION = 'kycc_back.wsgi.application'
 
 
 # Database
