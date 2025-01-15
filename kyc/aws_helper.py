@@ -47,6 +47,22 @@ class AWSRekognition:
         except Exception as e:
             raise Exception(f"Error creating face liveness session: {str(e)}")
 
+    def clear_collection(self):
+        """Clear all faces in the Rekognition collection."""
+        try:
+            # List all faces in the collection
+            response = self.client.list_faces(CollectionId=self.collection_id)
+            face_ids = [face['FaceId'] for face in response['Faces']]
+            
+            # Delete faces if any are found
+            if face_ids:
+                self.client.delete_faces(CollectionId=self.collection_id, FaceIds=face_ids)
+                logger.info(f"Deleted {len(face_ids)} faces from collection {self.collection_id}.")
+            else:
+                logger.info("No faces found in the collection to delete.")
+        except Exception as e:
+            raise Exception(f"Error clearing collection: {str(e)}")
+
     def get_session_results(self, session_id):
         """Retrieve session results from AWS Rekognition."""
         try:
