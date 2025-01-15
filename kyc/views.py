@@ -70,13 +70,19 @@ class SessionResultView(APIView):
             # Step 1: Get session results
             try:
                 session_results = aws_rekognition.get_session_results(session_id)['response']
+                logger.info(f"Session results: {session_results}")  # Log the full response to check its structure
             except Exception as session_error:
                 logger.error(f"Error retrieving session results: {session_error}")
                 return Response({'error': 'Failed to retrieve session results', 'detail': str(session_error)}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Check if session_results is a dictionary or list and log accordingly
+            if isinstance(session_results, list):
+                logger.error(f"Unexpected structure: session_results is a list, not a dictionary. Contents: {session_results}")
+                return Response({'error': 'Unexpected structure in session results'}, status=status.HTTP_400_BAD_REQUEST)
+
             # Step 2: Extract confidence level
             confidence = session_results.get('Confidence', 0)
-            if confidence < 90:
+            if confidence < 75:
                 logger.warning(f"Liveness check failed with confidence: {confidence}")
                 return Response({
                     'message': 'Liveness check failed',
@@ -138,3 +144,4 @@ class SessionResultView(APIView):
         except Exception as e:
             logger.error(f"Error processing session result for user {user.id}: {str(e)}")
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
