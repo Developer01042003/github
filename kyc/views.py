@@ -112,7 +112,7 @@ class SessionResultView(APIView):
                 logger.info(f"Duplicate face found using past Face ID: {face_id} in collection {aws_rekognition.collection_id}, Total faces in collection: {total_faces}")
 
                 # Check if the face_id already exists in the KYC records for this user
-                existing_kyc = KYC.objects.filter(user=user, face_id=face_id).first()
+                existing_kyc = KYC.objects.filter(face_id=face_id).first()
 
                 if existing_kyc:
                     logger.info(f"Duplicate face detected for user {user.id} using Face ID {face_id}.")
