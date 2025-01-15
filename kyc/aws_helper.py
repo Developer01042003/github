@@ -95,7 +95,7 @@ class AWSRekognition:
                 CollectionId=self.collection_id,
                 Image={'Bytes': image_bytes},
                 MaxFaces=1,
-                FaceMatchThreshold=95
+                FaceMatchThreshold=80
             )
             if 'FaceMatches' in response and response['FaceMatches']:
                 logger.info(f"Found duplicate face matches with confidence: {response['FaceMatches'][0]['Similarity']}")
