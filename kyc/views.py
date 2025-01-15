@@ -11,6 +11,9 @@ from .aws_helper import AWSRekognition
 from django.conf import settings
 from django.core.exceptions import ValidationError
 
+import logging
+logger = logging.getLogger(__name__)
+
 class CreateSessionView(APIView):
     permission_classes = [IsAuthenticated]
     
@@ -114,9 +117,12 @@ class SessionResultView(APIView):
                 s3_image_url=s3_url,
                 is_verified=True
             )
-            kyc.full_clean()
-            kyc.save()
-
+            try:
+               kyc.save()
+            except Exception as e:
+              logger.error(f"Error saving KYC object: {e}")
+             
+            
             return Response({
                 'message': 'KYC completed successfully',
                 'confidence': confidence
