@@ -114,7 +114,7 @@ class SessionResultView(APIView):
             kyc = KYC(
                 user=request.user,
                 face_id=face_id,
-                s3_image_url=s3_url,
+                selfie_url=s3_url,
                 is_verified=True
             )
             try:
