@@ -15,3 +15,13 @@ class KYC(models.Model):
     class Meta:
         verbose_name = "KYC"
         verbose_name_plural = "KYCs"
+
+
+from django.db import models
+
+class AWSRekognitionDummy(models.Model):
+    """A dummy model for AWS Rekognition admin actions."""
+    name = models.CharField(max_length=255, default="AWS Rekognition Admin")
+
+    def __str__(self):
+        return self.name
