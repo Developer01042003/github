@@ -75,6 +75,7 @@ class SessionResultView(APIView):
             # Extract confidence level
             confidence = session_results.get('Confidence', 0)
             if confidence < 90:
+                print(f"Liveness check failed with confidence: {confidence}")
                 return Response({
                     'message': 'Liveness check failed',
                     'confidence': confidence
@@ -95,6 +96,7 @@ class SessionResultView(APIView):
             # Step 4: Check for duplicate faces
             face_matches = aws_rekognition.search_faces(reference_image_bytes)
             if face_matches:
+                print("duplicate found")
                 print(f"Duplicate face found: {face_matches[0]['Face']['FaceId']}")
                 return Response({
                     'message': 'Duplicate face found',
