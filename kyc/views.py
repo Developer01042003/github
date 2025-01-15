@@ -6,8 +6,8 @@ from rest_framework import status
 from django.contrib.auth.models import User
 from .models import KYC
 from rest_framework.permissions import IsAuthenticated
-from ...kycc_back.kyc.serializers import UserKYCSerializer
-from ...kycc_back.kyc.aws_helper import AWSRekognition
+from .serializers import UserKYCSerializer
+from .aws_helper import AWSRekognition
 from django.conf import settings
 
 class CreateSessionView(APIView):
