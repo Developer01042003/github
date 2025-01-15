@@ -91,11 +91,14 @@ class AWSRekognition:
     def search_faces(self, image_bytes):
         """Search for duplicate faces in the Rekognition collection."""
         try:
+            response = self.client.list_faces(CollectionId=self.collection_id)
+            total_faces = len(response.get('Faces', []))
+            logger.info(f"Total faces in collection {self.collection_id}: {total_faces}")
             response = self.client.search_faces_by_image(
                 CollectionId=self.collection_id,
                 Image={'Bytes': image_bytes},
                 MaxFaces=1,
-                FaceMatchThreshold=80
+                FaceMatchThreshold=95
             )
             if 'FaceMatches' in response and response['FaceMatches']:
                 logger.info(f"Found duplicate face matches with confidence: {response['FaceMatches'][0]['Similarity']}")
