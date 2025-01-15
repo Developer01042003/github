@@ -82,7 +82,7 @@ class SessionResultView(APIView):
 
             # Step 2: Extract confidence level
             confidence = session_results.get('Confidence', 0)
-            if confidence < 75:
+            if confidence < 90:
                 logger.warning(f"Liveness check failed with confidence: {confidence}")
                 return Response({
                     'message': 'Liveness check failed',
@@ -118,10 +118,9 @@ class SessionResultView(APIView):
                     logger.info(f"Duplicate face detected for user {user.id} using Face ID {face_id}.")
                     # Return a response indicating that the KYC record already exists
                     return Response({
-                        'message': 'Duplicate face detected, KYC already exists',
-                        'confidence': confidence,
-                        'face_id': face_id,
-                        'total_faces_in_collection': total_faces
+                        'message': 'Duplicate face detected, Account Banned',
+                        'response': False,
+                        
                     }, status=status.HTTP_200_OK)
 
                 # If no existing KYC found, create a new KYC record
@@ -133,9 +132,7 @@ class SessionResultView(APIView):
                 )
                 return Response({
                     'message': 'KYC completed successfully using duplicate face',
-                    'confidence': confidence,
-                    'face_id': face_id,
-                    'total_faces_in_collection': total_faces
+                    'response' : True,
                 }, status=status.HTTP_200_OK)
 
             # Step 6: If no duplicate, index the face using your `index_face` helper function
@@ -153,8 +150,7 @@ class SessionResultView(APIView):
 
                 return Response({
                     'message': 'KYC completed successfully',
-                    'confidence': confidence,
-                    'face_id': face_id
+                    'response': True
                 }, status=status.HTTP_200_OK)
             else:
                 logger.error("No face was indexed.")
