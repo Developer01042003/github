@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from .serializers import UserKYCSerializer
 from .aws_helper import AWSRekognition
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
 class CreateSessionView(APIView):
     permission_classes = [IsAuthenticated]
@@ -108,11 +109,13 @@ class SessionResultView(APIView):
             print(f"Indexed face ID: {face_id}")
             # Step 6: Create KYC record using the existing S3 image URL
             kyc = KYC.objects.create(
-                user=request.user.email,
+                user=request.user,
                 face_id=face_id,
                 s3_image_url=s3_url,
                 is_verified=True
             )
+            kyc.full_clean()
+            kyc.save()
 
             return Response({
                 'message': 'KYC completed successfully',
