@@ -3,7 +3,7 @@ from .models import KYC
 
 from django.contrib import admin
 from django.contrib import messages
-from .aws_helper import AWSRekognition  # Adjust this path as per your project structure
+from .aws_helper import AWSRekognition
 
 
 @admin.action(description="Clear AWS Rekognition Face Collection")
