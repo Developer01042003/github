@@ -76,7 +76,7 @@ class SessionResultView(APIView):
 
             # Step 2: Extract confidence level
             confidence = session_results.get('Confidence', 0)
-            if confidence < 75:
+            if confidence < 90:
                 logger.warning(f"Liveness check failed with confidence: {confidence}")
                 return Response({
                     'message': 'Liveness check failed',
@@ -97,30 +97,42 @@ class SessionResultView(APIView):
             reference_image_bytes = aws_rekognition.download_image_as_bytes(bucket_name, object_key)
 
             # Step 5: Check for duplicate faces
-            face_matches = aws_rekognition.search_faces(reference_image_bytes)
-            if face_matches:
-                logger.warning(f"Duplicate face found: {face_matches[0]['Face']['FaceId']} with similarity: {face_matches[0]['Similarity']}")
+            duplicate_result = aws_rekognition.search_faces(reference_image_bytes)
+            if duplicate_result['duplicate']:
+                face_id = duplicate_result['face_id']
+                total_faces = duplicate_result['total_faces']
+                logger.info(f"Duplicate face found using past Face ID: {face_id} in collection {aws_rekognition.collection_id}, Total faces in collection: {total_faces}")
+                
+                # Use the existing face_id for KYC creation
+                kyc = KYC.objects.create(
+                    user=request.user,
+                    face_id=face_id,
+                    selfie_url=s3_url,
+                    is_verified=True
+                )
                 return Response({
-                    'message': 'Duplicate face found',
-                    'match_confidence': face_matches[0]['Similarity']
-                }, status=status.HTTP_400_BAD_REQUEST)
+                    'message': 'KYC completed successfully using duplicate face',
+                    'confidence': confidence,
+                    'face_id': face_id,
+                    'total_faces_in_collection': total_faces
+                }, status=status.HTTP_200_OK)
 
-            # Step 6: Index the face using the downloaded bytes
+            # Step 6: If no duplicate, index the face
             face_id = aws_rekognition.index_face(reference_image_bytes)
-            logger.info(f"Indexed face ID: {face_id}")
 
-            # Step 7: Create KYC record
+            # Step 7: Create KYC record with new face
             kyc = KYC.objects.create(
                 user=request.user,
                 face_id=face_id,
                 selfie_url=s3_url,
                 is_verified=True
             )
-            logger.info(f"KYC record created for user {request.user.id} with Face ID {face_id}")
+            logger.info(f"KYC record created for user {request.user.id} with new Face ID {face_id}")
 
             return Response({
                 'message': 'KYC completed successfully',
-                'confidence': confidence
+                'confidence': confidence,
+                'face_id': face_id
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
