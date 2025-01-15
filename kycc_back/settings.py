@@ -65,7 +65,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'kyc_back.urls'
+ROOT_URLCONF = 'kycc_back.urls'
 
 TEMPLATES = [
     {
