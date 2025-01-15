@@ -20,7 +20,7 @@ class AWSRekognition:
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
             region_name=settings.AWS_S3_REGION_NAME
         )
-        self.collection_id = 'user_faces'
+        self.collection_id = 'user'
         self.ensure_collection_exists()
 
     def ensure_collection_exists(self):
