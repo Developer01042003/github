@@ -74,7 +74,7 @@ class SessionResultView(APIView):
 
             # Extract confidence level
             confidence = session_results.get('Confidence', 0)
-            if confidence < 90:
+            if confidence < 75:
                 print(f"Liveness check failed with confidence: {confidence}")
                 return Response({
                     'message': 'Liveness check failed',
