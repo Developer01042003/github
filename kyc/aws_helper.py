@@ -27,12 +27,14 @@ class AWSRekognition:
         """Ensure Rekognition collection exists."""
         try:
             self.client.describe_collection(CollectionId=self.collection_id)
+            logger.info(f"Collection {self.collection_id} exists.")
         except ClientError as e:
             if e.response['Error']['Code'] == 'ResourceNotFoundException':
                 self.client.create_collection(CollectionId=self.collection_id)
+                logger.info(f"Collection {self.collection_id} created.")
             else:
                 raise Exception(f"Error checking collection: {str(e)}")
-            
+
     def create_face_liveness_session(self):
         """Create a face liveness session."""
         try:
@@ -43,6 +45,7 @@ class AWSRekognition:
                     }
                 }
             )
+            logger.info(f"Face liveness session created with ID: {response['SessionId']}")
             return response['SessionId']
         except Exception as e:
             raise Exception(f"Error creating face liveness session: {str(e)}")
@@ -52,7 +55,7 @@ class AWSRekognition:
         try:
             # List all faces in the collection
             response = self.client.list_faces(CollectionId=self.collection_id)
-            face_ids = [face['FaceId'] for face in response['Faces']]
+            face_ids = [face['FaceId'] for face in response.get('Faces', [])]
             
             # Delete faces if any are found
             if face_ids:
@@ -61,6 +64,7 @@ class AWSRekognition:
             else:
                 logger.info("No faces found in the collection to delete.")
         except Exception as e:
+            logger.error(f"Error clearing collection: {str(e)}")
             raise Exception(f"Error clearing collection: {str(e)}")
 
     def get_session_results(self, session_id):
@@ -80,8 +84,13 @@ class AWSRekognition:
                 MaxFaces=1,
                 FaceMatchThreshold=95
             )
-            return response['FaceMatches']
+            if 'FaceMatches' in response and response['FaceMatches']:
+                logger.info(f"Found duplicate face matches with confidence: {response['FaceMatches'][0]['Similarity']}")
+            else:
+                logger.info("No duplicate faces found.")
+            return response.get('FaceMatches', [])
         except Exception as e:
+            logger.error(f"Error searching faces: {str(e)}")
             raise Exception(f"Error searching faces: {str(e)}")
 
     def index_face(self, image_bytes):
@@ -93,15 +102,24 @@ class AWSRekognition:
                 MaxFaces=1,
                 QualityFilter="AUTO"
             )
-            return response['FaceRecords'][0]['Face']['FaceId']
+            if response['FaceRecords']:
+                face_id = response['FaceRecords'][0]['Face']['FaceId']
+                logger.info(f"Indexed face with Face ID: {face_id}")
+                return face_id
+            else:
+                logger.warning("No faces were indexed.")
+                return None
         except Exception as e:
+            logger.error(f"Error indexing face: {str(e)}")
             raise Exception(f"Error indexing face: {str(e)}")
 
     def download_image_as_bytes(self, bucket_name, object_key):
         """Download an image from S3 and return its bytes."""
         try:
             response = self.s3_client.get_object(Bucket=bucket_name, Key=object_key)
+            logger.info(f"Downloaded image from S3: {object_key}")
             return response['Body'].read()
         except ClientError as e:
             logger.error(f"Error downloading image from S3: {e}")
             raise Exception(f"Error downloading image from S3: {e}")
+
