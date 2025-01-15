@@ -108,7 +108,7 @@ class SessionResultView(APIView):
             print(f"Indexed face ID: {face_id}")
             # Step 6: Create KYC record using the existing S3 image URL
             kyc = KYC.objects.create(
-                user=request.user.id,
+                user=request.user.email,
                 face_id=face_id,
                 s3_image_url=s3_url,
                 is_verified=True
