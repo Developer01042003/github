@@ -1,20 +1,18 @@
 from django.contrib import admin
 from .models import KYC
 
-from django.contrib import admin
-from django.contrib import messages
-from .aws_helper import AWSRekognition
 
-
-@admin.action(description="Clear AWS Rekognition Face Collection")
-def clear_face_collection(modeladmin, request, queryset):
-    """Admin action to clear the Rekognition face collection."""
-    rekognition = AWSRekognition()
-    try:
-        rekognition.clear_collection()
-        messages.success(request, "Successfully cleared the Rekognition face collection.")
-    except Exception as e:
-        messages.error(request, f"Error clearing the face collection: {str(e)}")
 
 
 admin.site.register(KYC)
+
+from django.contrib import admin
+from .models import AWSRekognitionDummy
+from .admin_actions import clear_face_collection  # Adjust the import path if needed
+
+
+@admin.register(AWSRekognitionDummy)
+class AWSRekognitionAdmin(admin.ModelAdmin):
+    actions = [clear_face_collection]
+    list_display = ('name',)
+
