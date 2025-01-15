@@ -194,8 +194,19 @@ CORS_ALLOWED_ORIGINS = [
 
 
 
-AWS_ACCESS_KEY_ID = 'AKIAUZPNLWACTIT4YXYY'
-AWS_SECRET_ACCESS_KEY = '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'
+import environ
+import os
+
+# Initialize environment variables
+env = environ.Env()
+
+# Read .env file (useful for local development)
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+# AWS Credentials from Render environment variables
+AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY')
+
 AWS_STORAGE_BUCKET_NAME = 'imagingkyccc'
 AWS_S3_REGION_NAME = 'us-east-1'
 
