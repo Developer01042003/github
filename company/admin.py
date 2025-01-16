@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Company,KycSharedData
+from .models import Company, CustomAuthToken,KycSharedData
 import uuid
 
 from django.contrib import admin
@@ -28,4 +28,6 @@ class CompanyAdmin(admin.ModelAdmin):
 class CompanyUserAdmin(admin.ModelAdmin):
     list_display = ('company', 'user', 'created_at')
     list_filter = ('company', 'created_at')
+
+admin.site.register(CustomAuthToken)
     
