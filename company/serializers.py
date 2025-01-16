@@ -6,7 +6,7 @@ from users.serializers import UserSerializer
 class CompanySerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
-        ffields = '__all__'
+        fields = '__all__'
         read_only_fields = ['api_id', 'api_key']
 
 class CompanySignupSerializer(serializers.ModelSerializer):
