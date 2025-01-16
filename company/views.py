@@ -104,7 +104,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def get_api(self, request):
-        company = request.company
+        company = request.user.company
         if company.is_api == True and company.is_verified == True:
             return Response({
                 'api_id': company.api_id,
