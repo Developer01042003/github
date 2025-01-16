@@ -59,7 +59,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
           response_data = {
             'refresh': str(refresh),
             'access': str(refresh.access_token),
-            'company': CompanySerializer(company).data
+            'company': Company.data
          }
 
           if api_keys:
