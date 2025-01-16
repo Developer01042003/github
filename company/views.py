@@ -78,19 +78,26 @@ class CompanyViewSet(viewsets.ModelViewSet):
     #update dashboard company
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def refresh_dashboard(self, request):
-        Company = request.company
-        balance = Company.balance
-        api = apiKeys.objects.get(company=Company)
+      company = request.user.company
+        # Assuming the company is attached to the user, if that's not the case, adjust accordingly
+      balance = company.balance
+      try:
+        api = apiKeys.objects.get(company=company)
         if api:
-            return Response({
-                'balance': balance,
-                'api_id': api.api_id,
-                'api_key': api.api_key
-            }, status=status.HTTP_200_OK)
-        else:
           return Response({
+            'company': company.data,
+            'balance': balance,
+            'api_id': api.api_id,
+            'api_key': api.api_key
+           }, status=status.HTTP_200_OK)
+      except apiKeys.DoesNotExist:
+          return Response({
+            'company': company.data,
             'balance': balance
-          }, status=status.HTTP_200_OK)
+        }, status=status.HTTP_200_OK)
+
+      
+
     
     
     
