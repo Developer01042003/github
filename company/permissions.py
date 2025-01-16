@@ -29,9 +29,7 @@ class IsValidAuthToken(BasePermission):
             print(f"Token Found: {token_obj.token}")
 
             # Validate the IP address
-            if token_obj.ip_address != ip_address:
-                print(f"IP mismatch: Expected {token_obj.ip_address}, Got {ip_address}")
-                raise PermissionDenied("IP address does not match the token.")
+            
         except CustomAuthToken.DoesNotExist:
             print(f"Invalid Token: {auth_token}")
             raise PermissionDenied("Invalid auth token.")
