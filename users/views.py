@@ -120,6 +120,18 @@ class UserViewSet(viewsets.ModelViewSet):
                 return Response({
                     'error': str(e)
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+    @action(detail=False, methods=['post'], permission_classes = [IsAuthenticated])
+    def dashboard(self, request):
+        user = request.user
+        if user:
+            return Response({
+                'user': UserSerializer(user).data
+            })
+        return Response({
+            'error': 'User is not verified'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
 
                     
 

@@ -130,6 +130,8 @@ class SessionResultView(APIView):
                     selfie_url=s3_url,
                     is_verified=True
                 )
+                user = user.is_verified = True
+                user.save()
                 return Response({
                     'message': 'KYC completed successfully using duplicate face',
                     'response' : True,
