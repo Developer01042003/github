@@ -50,7 +50,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
         # Generate JWT tokens
-          refresh = RefreshToken.for_user(company.user)
+          refresh = RefreshToken.for_user(company)
 
         # Fetch API keys (if they exist)
           api_keys = apiKeys.objects.filter(company=company).first()  # Renamed from `apiKeys` to `api_keys`

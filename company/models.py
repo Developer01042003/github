@@ -18,7 +18,7 @@ class Company(models.Model):
     balance = models.DecimalField(max_digits=10, decimal_places=4, default=0.000)
     
     # New field to link to the User model
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    
 
     def get_api_id(self):
         api_key_obj = apiKeys.objects.filter(company=self).first()
