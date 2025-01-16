@@ -4,7 +4,7 @@ from django.contrib.auth.hashers import make_password
 from django.conf import settings
 
 class Company(models.Model):
-    company_id = models.CharField(max_length=255, unique=True)
+    company_id = models.CharField(primary_key=True,max_length=255, unique=True)
     name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=255)
@@ -38,6 +38,16 @@ class Company(models.Model):
 
     class Meta:
         verbose_name_plural = "Companies"
+
+class CustomAuthToken(models.Model):
+    company = models.ForeignKey(Company, related_name='auth_tokens', on_delete=models.CASCADE)
+    token = models.CharField(max_length=256, unique=True)
+    ip_address = models.GenericIPAddressField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"Token: {self.token} for Company: {self.company.name}, IP: {self.ip_address}"
 
 
 class apiKeys(models.Model):

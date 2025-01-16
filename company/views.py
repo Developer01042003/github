@@ -4,7 +4,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import check_password
-from .models import Company, KycSharedData, apiKeys, nft_data
+
+from company.permissions import IsValidAuthToken
+from .models import Company, CustomAuthToken, KycSharedData, apiKeys, nft_data
+from django.utils.crypto import get_random_string
 from .serializers import (CompanySerializer, CompanySignupSerializer,
                         CompanyLoginSerializer)
 from users.models import userUniquness
@@ -29,88 +32,113 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def login(self, request):
-       serializer = CompanyLoginSerializer(data=request.data)
-    
-       if serializer.is_valid():
-          email = serializer.validated_data['email']
-          password = serializer.validated_data['password']
+        serializer = CompanyLoginSerializer(data=request.data)
 
-        # Fetch the company by email
-          company = Company.objects.filter(email=email).first()
-        
-          if not company:
-            return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            password = serializer.validated_data['password']
 
-        # Check if the company is verified
-          if not company.is_verified:
-            return Response({'error': 'Company not verified. Please contact admin.'}, status=status.HTTP_401_UNAUTHORIZED)
+            # Fetch the company by email
+            company = Company.objects.filter(email=email).first()
 
-        # Verify the password
-          if not check_password(password, company.password):
-            return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+            if not company:
+                return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Generate JWT tokens
-          refresh = RefreshToken.for_user(company)
+            # Check if the company is verified
+            if not company.is_verified:
+                return Response({'error': 'Company not verified. Please contact admin.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Fetch API keys (if they exist)
-          api_keys = apiKeys.objects.filter(company=company).first()  # Renamed from `apiKeys` to `api_keys`
-        
-          company_data = CompanySerializer(company).data
-        # Prepare response data
-          response_data = {
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'company': CompanySerializer(company).data
-         }
+            # Verify the password
+            if not check_password(password, company.password):
+                return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
-          if api_keys:
-            response_data.update({
-                'api_id': api_keys.api_id,
-                'api_key': api_keys.api_key,
-            })
+            # Generate a new token (company_id + random string)
+            random_string = get_random_string(length=32)  # Generate a random string
+            token = f"{company.company_id}_{random_string}"
 
-        # Return success response
-          return Response(response_data, status=status.HTTP_200_OK)
+            # Get the IP address from the request
+            ip_address = request.META.get('REMOTE_ADDR')
 
-    # If serializer validation fails
-       return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # Delete any existing token for this company
+            CustomAuthToken.objects.filter(company=company).delete()
+
+            # Create a new token and save it with the IP address
+            CustomAuthToken.objects.create(
+                company=company,
+                token=token,
+                ip_address=ip_address
+            )
+
+            # Fetch API keys (if they exist)
+            api_keys = apiKeys.objects.filter(company=company).first()
+
+            # Serialize company data
+            company_data = CompanySerializer(company).data
+
+            # Prepare response data
+            response_data = {
+                'token': token,
+                'message': "Login successful, new token generated.",
+                'company': company_data  # Include company data here
+            }
+
+            if api_keys:
+                response_data.update({
+                    'api_id': api_keys.api_id,
+                    'api_key': api_keys.api_key,
+                })
+
+            # Return success response
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        # If serializer validation fails
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     
     #update dashboard company
-    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['post'], permission_classes=[IsValidAuthToken])
     def refresh_dashboard(self, request):
-      company = request.user.company
-        # Assuming the company is attached to the user, if that's not the case, adjust accordingly
-      balance = company.balance
-      try:
-        api = apiKeys.objects.get(company=company)
-        if api:
-          return Response({
-            'company': company.data,
-            'balance': balance,
-            'api_id': api.api_id,
-            'api_key': api.api_key
-           }, status=status.HTTP_200_OK)
-      except apiKeys.DoesNotExist:
-          return Response({
-            'company': company.data,
-            'balance': balance
-        }, status=status.HTTP_200_OK)
+        # Fetch the company from the request (attached by the permission class)
+        company = request.company
+
+        # Get the company's balance
+        balance = company.balance
+
+        try:
+            # Try fetching API keys for the company
+            api = apiKeys.objects.get(company=company)
+            return Response({
+                'company': CompanySerializer(company).data,  # Include serialized company data
+                'balance': balance,
+                'api_id': api.api_id,
+                'api_key': api.api_key
+            }, status=status.HTTP_200_OK)
+        except apiKeys.DoesNotExist:
+            # If API keys do not exist, return the response without them
+            return Response({
+                'company': CompanySerializer(company).data,  # Include serialized company data
+                'balance': balance
+            }, status=status.HTTP_200_OK)
 
       
 
     
     
     
-    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['post'], permission_classes=[IsValidAuthToken])
     def get_api(self, request):
-        company = request.user.company
-        if company.is_api == True and company.is_verified == True:
+        # Fetch the company from the request (attached by the permission class)
+        company = request.company
+
+        # Check if the company has API access and is verified
+        if company.is_api and company.is_verified:
             return Response({
-                'api_id': company.api_id,
-                'api_key': company.api_key
+                'api_id': company.get_api_id(),
+                'api_key': company.get_api_key()
             }, status=status.HTTP_200_OK)
-        if company.is_api == False and company.is_verified == True:
+
+        # If API access is not enabled but the company is verified, create API keys
+        if not company.is_api and company.is_verified:
             api = apiKeys.objects.create(company=company)
             company.is_api = True
             company.save()
@@ -118,10 +146,11 @@ class CompanyViewSet(viewsets.ModelViewSet):
                 'api_id': api.api_id,
                 'api_key': api.api_key
             }, status=status.HTTP_201_CREATED)
-        else :
-            return Response({
-                'error': 'Company not verified'
-            }, status=status.HTTP_401_UNAUTHORIZED)    
+
+        # If the company is not verified
+        return Response({
+            'error': 'Company not verified.'
+        }, status=status.HTTP_401_UNAUTHORIZED) 
     
             
 
