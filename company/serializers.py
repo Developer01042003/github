@@ -13,7 +13,7 @@ class CompanySerializer(serializers.ModelSerializer):
 class CompanySignupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
-        fields = ['name', 'email', 'password', 'address', 'country']
+        fields = ['company_id','name', 'email', 'password', 'address', 'country']
         extra_kwargs = {'password': {'write_only': True}}
 
 class CompanyLoginSerializer(serializers.Serializer):

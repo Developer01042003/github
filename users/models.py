@@ -27,3 +27,16 @@ class userUniquness(models.Model):
     id = models.UUIDField(default=uuid.uuid4,primary_key=True, unique=True, editable=False)
     company = models.ForeignKey('company.Company', on_delete=models.CASCADE)
     is_verified = models.BooleanField(default=False)
+
+class kycShareKey(models.Model):
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    company_id = models.CharField(max_length=255)
+    id = models.UUIDField(primary_key=True, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_shared = models.BooleanField(default=False)
+
+
+class nft_uniquekey(models.Model):
+    nft_unique = models.UUIDField(default=uuid.uuid4, primary_key=True, unique=True, editable=False)
+    is_verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)

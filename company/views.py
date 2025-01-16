@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import check_password
-from .models import Company
+from .models import Company, KycSharedData, apiKeys, nft_data
 from .serializers import (CompanySerializer, CompanySignupSerializer,
                         CompanyLoginSerializer)
 from users.models import userUniquness
@@ -19,8 +19,9 @@ class CompanyViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             company = serializer.save()
             return Response({
+                'status': True,
                 'message': 'Company registered successfully. Please wait for admin verification.',
-                'company': CompanySerializer(company).data
+                
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -31,20 +32,73 @@ class CompanyViewSet(viewsets.ModelViewSet):
             try:
                 company = Company.objects.get(email=serializer.validated_data['email'])
                 if check_password(serializer.validated_data['password'], company.password):
+                    if not company.is_verified:
+                        return Response({'error': 'Company not verified'}, 
+                              status=status.HTTP_401_UNAUTHORIZED)
                     refresh = RefreshToken.for_user(company)
-                    return Response({
+                    apiKeys = apiKeys.objects.get(company=company)
+                    if apiKeys:
+                        return Response({
+                        'refresh': str(refresh),
+                        'access': str(refresh.access_token),
+                        'company': CompanySerializer(company).data,
+                        'api_id': apiKeys.api_id,
+                        'api_key': apiKeys.api_key
+                    }, status=status.HTTP_200_OK)
+                    else:
+                      return Response({
                         'refresh': str(refresh),
                         'access': str(refresh.access_token),
                         'company': CompanySerializer(company).data
-                    })
+                     })
                 return Response({'error': 'Invalid credentials'}, 
                               status=status.HTTP_401_UNAUTHORIZED)
             except Company.DoesNotExist:
                 return Response({'error': 'Company not found'}, 
                               status=status.HTTP_404_NOT_FOUND)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
     
+    #update dashboard company
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def refresh_dashboard(self, request):
+        Company = request.company
+        balance = Company.balance
+        api = apiKeys.objects.get(company=Company)
+        if api:
+            return Response({
+                'balance': balance,
+                'api_id': api.api_id,
+                'api_key': api.api_key
+            }, status=status.HTTP_200_OK)
+        else:
+          return Response({
+            'balance': balance
+          }, status=status.HTTP_200_OK)
+    
+    
+    
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def get_api(self, request):
+        company = request.company
+        if company.is_api == True and company.is_verified == True:
+            return Response({
+                'api_id': company.api_id,
+                'api_key': company.api_key
+            }, status=status.HTTP_200_OK)
+        if company.is_api == False and company.is_verified == True:
+            api = apiKeys.objects.create(company=company)
+            company.is_api = True
+            company.save()
+            return Response({
+                'api_id': api.api_id,
+                'api_key': api.api_key
+            }, status=status.HTTP_201_CREATED)
+        else :
+            return Response({
+                'error': 'Company not verified'
+            }, status=status.HTTP_401_UNAUTHORIZED)    
+    
+            
 
     @action(detail=False, methods=['post'])
     def add_user(self, request):
@@ -64,8 +118,16 @@ class CompanyViewSet(viewsets.ModelViewSet):
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
         # Check if user exists and is verified
+        if company.balance < 0.0001:
+            return Response({
+                'error': 'Insufficient balance'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
         id = request.data.get('id')
         try:
+            balance = company.balance - 0.09
+            company.balance = balance
+            company.save()
             userUniquness = userUniquness.objects.get(id=id)
             userUniquness.is_verified = True
             userUniquness.save()
@@ -83,4 +145,68 @@ class CompanyViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])    
     def get_kyc_certificate(self,request):
         kyc_key = request.data.get('kyc_key')
-        pass
+        api_key = request.data.get('api_key')
+        api_id = request.data.get('api_id')
+
+        apiKeys = apiKeys.objects.get(api_key=api_key, api_id=api_id)
+        if apiKeys:
+            company = apiKeys.company
+        if company.balance < 10:
+            return Response({
+                'error': 'Insufficient balance'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if company.is_verified == True and company.is_kyc_need == True:
+            if company:
+                kyc_check = KycSharedData.objects.filter(id=kyc_key, company=company)
+                if kyc_check:
+                    return Response({
+                        'error': 'KYC already exists'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            kyc = KycSharedData.objects.create(id=kyc_key, company=company, is_kyc_certificate=True)
+            company.balance = company.balance - 0.90
+            company.save()
+            return Response({
+                'status': True
+            }, status=status.HTTP_200_OK)
+        
+
+
+        
+    
+    @action(detail=False, methods=['post'])
+    def nft_verification(self,request):
+        api_key = request.data.get('api_key')
+        api_id = request.data.get('api_id')
+        nft_unique = request.data.get('nft_unique')
+        
+        apiKeys = apiKeys.objects.get(api_key=api_key, api_id=api_id)
+
+        if apiKeys:
+            company = apiKeys.company
+        
+        if company.balance < 5:
+            return Response({
+                'error': 'Insufficient balance'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if company.is_verified == True:
+            if company:
+                nft_check = nft_data.objects.filter(nft_unique=nft_unique, Company=company)
+                if nft_check:
+                    return Response({
+                        'error': 'NFT already exists'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            nft = nft_data.objects.create(nft_unique=nft_unique, Company=company, is_verified=True)
+            company.balance = company.balance - 0.09
+            company.save()
+            return Response({
+                'status': True
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'error': 'Company not verified'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        
+        
+
+
