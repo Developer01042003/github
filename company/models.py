@@ -17,6 +17,14 @@ class Company(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     balance = models.DecimalField(max_digits=10, decimal_places=4, default=0.000)
 
+    def get_api_id(self):
+        api_key_obj = apiKeys.objects.filter(company=self).first()
+        return api_key_obj.api_id if api_key_obj else None
+
+    def get_api_key(self):
+        api_key_obj = apiKeys.objects.filter(company=self).first()
+        return api_key_obj.api_key if api_key_obj else None
+
     def save(self, *args, **kwargs):
         if self.password and not self.password.startswith('pbkdf2_sha256'):
             self.password = make_password(self.password)
