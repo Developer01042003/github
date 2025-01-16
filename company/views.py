@@ -8,12 +8,14 @@ from .models import Company, KycSharedData, apiKeys, nft_data
 from .serializers import (CompanySerializer, CompanySignupSerializer,
                         CompanyLoginSerializer)
 from users.models import userUniquness
+from rest_framework.permissions import AllowAny
+
 
 class CompanyViewSet(viewsets.ModelViewSet):
     queryset = Company.objects.all()
     serializer_class = CompanySerializer
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def signup(self, request):
         serializer = CompanySignupSerializer(data=request.data)
         if serializer.is_valid():
@@ -25,7 +27,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def login(self, request):
         serializer = CompanyLoginSerializer(data=request.data)
         if serializer.is_valid():
