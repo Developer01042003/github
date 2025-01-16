@@ -1,3 +1,4 @@
+from datetime import timezone
 from django.db import models
 import uuid
 from django.contrib.auth.hashers import make_password
@@ -44,7 +45,7 @@ class CustomAuthToken(models.Model):
     token = models.CharField(max_length=256, unique=True)
     ip_address = models.GenericIPAddressField()
     created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField(default=timezone.now)
+    
 
     def __str__(self):
         return f"Token: {self.token} for Company: {self.company.name}, IP: {self.ip_address}"
