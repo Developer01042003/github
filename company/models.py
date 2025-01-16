@@ -16,6 +16,9 @@ class Company(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     balance = models.DecimalField(max_digits=10, decimal_places=4, default=0.000)
+    
+    # New field to link to the User model
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def get_api_id(self):
         api_key_obj = apiKeys.objects.filter(company=self).first()
@@ -35,6 +38,7 @@ class Company(models.Model):
 
     class Meta:
         verbose_name_plural = "Companies"
+
 
 class apiKeys(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
