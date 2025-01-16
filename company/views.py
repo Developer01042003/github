@@ -29,36 +29,51 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def login(self, request):
-        serializer = CompanyLoginSerializer(data=request.data)
-        if serializer.is_valid():
-            try:
-                company = Company.objects.get(email=serializer.validated_data['email'])
-                if check_password(serializer.validated_data['password'], company.password):
-                    if not company.is_verified:
-                        return Response({'error': 'Company not verified'}, 
-                              status=status.HTTP_401_UNAUTHORIZED)
-                    refresh = RefreshToken.for_user(company)
-                    apiKeys = apiKeys.objects.get(company=company)
-                    if apiKeys:
-                        return Response({
-                        'refresh': str(refresh),
-                        'access': str(refresh.access_token),
-                        'company': CompanySerializer(company).data,
-                        'api_id': apiKeys.api_id,
-                        'api_key': apiKeys.api_key
-                    }, status=status.HTTP_200_OK)
-                    else:
-                      return Response({
-                        'refresh': str(refresh),
-                        'access': str(refresh.access_token),
-                        'company': CompanySerializer(company).data
-                     })
-                return Response({'error': 'Invalid credentials'}, 
-                              status=status.HTTP_401_UNAUTHORIZED)
-            except Company.DoesNotExist:
-                return Response({'error': 'Company not found'}, 
-                              status=status.HTTP_404_NOT_FOUND)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+       serializer = CompanyLoginSerializer(data=request.data)
+    
+       if serializer.is_valid():
+          email = serializer.validated_data['email']
+          password = serializer.validated_data['password']
+
+        # Fetch the company by email
+          company = Company.objects.filter(email=email).first()
+        
+          if not company:
+            return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Check if the company is verified
+          if not company.is_verified:
+            return Response({'error': 'Company not verified. Please contact admin.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Verify the password
+          if not check_password(password, company.password):
+            return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Generate JWT tokens
+          refresh = RefreshToken.for_user(company)
+
+        # Fetch API keys (if they exist)
+          api_keys = apiKeys.objects.filter(company=company).first()  # Renamed from `apiKeys` to `api_keys`
+
+        # Prepare response data
+          response_data = {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'company': CompanySerializer(company).data
+         }
+
+          if api_keys:
+            response_data.update({
+                'api_id': api_keys.api_id,
+                'api_key': api_keys.api_key,
+            })
+
+        # Return success response
+          return Response(response_data, status=status.HTTP_200_OK)
+
+    # If serializer validation fails
+       return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     
     #update dashboard company
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
